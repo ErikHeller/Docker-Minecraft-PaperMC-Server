@@ -1,6 +1,7 @@
-# Docker Minecraft JAVA PaperMC Server 1.18
+# Docker Minecraft PaperMC Server
 
-Docker Minecraft PaperMC server for 1.18, 1.17 and upcoming versions using the [PaperMC API v2](https://papermc.io/api/docs/swagger-ui).
+Dockerized Minecraft server for 1.18, 1.17 and upcoming versions using the [PaperMC](https://papermc.io).
+When building an image from the provided Dockerfile, the latest version of the PaperMC Minecraft server will be retrieved from the [PaperMC API v2](https://papermc.io/api/docs/swagger-ui).
 
 ## Requirements
 
