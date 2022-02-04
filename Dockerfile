@@ -1,67 +1,39 @@
-########################################################
-############## We use a java base image ################
-########################################################
-FROM azul/zulu-openjdk-alpine:17-jre AS build
-RUN apk add curl jq
+FROM azul/zulu-openjdk-alpine:17-jre
 
-LABEL Marc Tönsing <marc@marc.tv>
+# Install dependencies
+RUN apk add curl jq screen
 
-ARG version=1.18.1
+# Target version of the minecraft server
+ENV MC_VERSION=latest
+# Memory size to be allocated for the server
+ENV MEMORY_SIZE=3G
+# Set flags for optimizing the java runtime
+ENV JAVA_FLAGS="-Dlog4j2.formatMsgNoLookups=true -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M -XX:G1ReservePercent=20 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=4 -XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 -XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1 -Dusing.aikars.flags=mcflags.emc.gs -Dcom.mojang.eula.agree=true"
 
-
-########################################################
-############## Download Paper with API #################
-########################################################
 WORKDIR /opt/minecraft
-COPY ./getpaperserver.sh /
-RUN chmod +x /getpaperserver.sh
-RUN /getpaperserver.sh ${version}
 
-# Run paperclip and obtain patched jar
-RUN java -Dpaperclip.patchonly=true -jar /opt/minecraft/paperclip.jar; exit 0
+# Copy necessary scripts into docker image
+COPY entrypoint.sh /opt/minecraft
+COPY ./getpaperserver.sh /opt/minecraft
+RUN chmod +x /opt/minecraft/entrypoint.sh /opt/minecraft/getpaperserver.sh
 
-########################################################
-############## Running environment #####################
-########################################################
-FROM azul/zulu-openjdk-alpine:17-jre AS runtime
+# Get current paper MC server
+RUN /opt/minecraft/getpaperserver.sh ${MC_VERSION}
 
-# Working directory
-WORKDIR /data
-
-# Obtain runable jar from build stage
-COPY --from=build /opt/minecraft/paperclip.jar /opt/minecraft/paperspigot.jar
-
-# Install and run rcon
-ARG RCON_CLI_VER=1.4.8
-ADD https://github.com/itzg/rcon-cli/releases/download/${RCON_CLI_VER}/rcon-cli_${RCON_CLI_VER}_linux_amd64.tar.gz /tmp/rcon-cli.tgz
-RUN tar -x -C /usr/local/bin -f /tmp/rcon-cli.tgz rcon-cli && \
-  rm /tmp/rcon-cli.tgz
-
-# Volumes for the external data (Server, World, Config...)
+# Create volumes for external data (Server, World, Config...) and logs
 VOLUME "/data"
 
 # Expose minecraft port
 EXPOSE 25565/tcp
 EXPOSE 25565/udp
 
-# Set memory size
-ARG memory_size=3G
-ENV MEMORYSIZE=$memory_size
-
-# Set Java Flags
-ARG java_flags="-Dlog4j2.formatMsgNoLookups=true -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M -XX:G1ReservePercent=20 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=4 -XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 -XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1 -Dusing.aikars.flags=mcflags.emc.gs -Dcom.mojang.eula.agree=true"
-ENV JAVAFLAGS=$java_flags
-
 WORKDIR /data
 
-COPY /docker-entrypoint.sh /opt/minecraft
-RUN chmod +x /opt/minecraft/docker-entrypoint.sh
-
-# Install gosu
-RUN set -eux; \
-	apk update; \
-	apk add --no-cache su-exec;
+# Use non-root user for starting the server
+RUN adduser -D minecraft
+RUN chown minecraft:minecraft /data
+USER minecraft
 
 # Entrypoint
-ENTRYPOINT ["/opt/minecraft/docker-entrypoint.sh"]
+ENTRYPOINT ["/opt/minecraft/entrypoint.sh"]
 

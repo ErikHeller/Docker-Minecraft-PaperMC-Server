@@ -1,115 +1,81 @@
 # Docker Minecraft JAVA PaperMC Server 1.18
 
-Docker Minecraft PaperMC server for 1.18, 1.17 and 1.16 (deprecated!)
+Docker Minecraft PaperMC server for 1.18, 1.17 and upcoming versions using the [PaperMC API v2](https://papermc.io/api/docs/swagger-ui).
 
-# Minecraft 1.18 beta
+## Requirements
 
-	docker pull marctv/minecraft-papermc-server:1.18
+* Docker
+* docker-compose  
 
-See https://github.com/mtoensing/Docker-Minecraft-PaperMC-Server/issues/33 for more information.
+## Starting the Minecraft Server
+To start the server execute the command:
+```shell script
+docker-compose up -d
+```
+This will start a docker container with the name `paper_minecraft` in the background.
+When starting, the current build of the selected version of the PaperMC server will be downloaded and executed.
 
-**Experimental test builds for 1.18. Use with extreme caution! Backups are mandatory.**
+The version of the minecraft server can be changed by changing the environment variable `MC_VERSION` in `docker-compose.yml`.
 
-## Quick Start
-```sh
-docker pull marctv/minecraft-papermc-server
+### Updating the Minecraft Server
+
+Edit the `MC_VERSION` variable in `docker-compose.yml` to contain the desired minecraft server version.
+Check https://papermc.io/downloads to see which versions are currently available or execute 
+```shell script
+curl "https://papermc.io/api/v2/projects/paper"
+```
+in a terminal.
+
+To update the server (and the docker image) re-build the image and restart the container with:
+
+```shell script
+docker-compose down
+docker-compose build
+docker-compose up -d
 ```
 
-```sh
-docker run \
-  --rm \
-  --name mcserver \
-  -e MEMORYSIZE='1G' \
-  -v /homes/joe/mcserver:/data:rw \
-  -p 25565:25565 \
--i marctv/minecraft-papermc-server:latest
-```
-```sh
-docker attach mcserver
-```
+## Environment variables
 
-## How do I update the container? 
+The docker image built from `./Dockerfile` supports the following environment variables:
 
-* Re-download the image from the docker
-* Stop the container
-* Clear the container
-* Start the container
+* `MC_VERSION`: Sets the target version of the minecraft server. Setting this value to `latest` always retrieves the latest available version of the PaperMC server before running.
+    * *default:* `latest`
+* `MEMORY_SIZE`: Memory size to be allocated for the server. Do not allocate more than 70% of your systems RAM for this container!
+    * *default:* `3G`
+* `JAVA_FLAGS`: Use custom flags for optimizing the java runtime. Please remember to include the `-Dcom.mojang.eula.agree=true` flag.
+    * *default:*
+      ```
+      -Dlog4j2.formatMsgNoLookups=true -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M -XX:G1ReservePercent=20 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=4 -XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 -XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1 -Dusing.aikars.flags=mcflags.emc.gs -Dcom.mojang.eula.agree=true
+      ```
 
-## Volume
+## Working with volumes
 
-You can use volumes to store data persistantly, for example:
+Per default the `docker-compose.yml` uses the named volume *minecraft-data* to store data like world data.
+Alternatively you can use a directory in the host system instead of a named volume for example:
 
-```sh
-docker run --rm \
-	-p 25565:25565 \
-	-v <full path to folder where you want to store the server files>:/data:rw \
-	marctv/minecraft-papermc-server:latest
- ```
+```yaml
+version: "3"
 
-## Run as non-root user
-
-You can get the desired UID/GID (xxx) with the ID command (id username) then add the following to your docker run command:
-
-```sh
--e PUID=xxx
--e PGID=xxx
+services:
+  minecraft:
+    build: ./
+    container_name: "paper_minecraft"
+    environment:
+      MEMORY_SIZE: "3G"
+    volumes:
+      - /path/to/minecraft-data:/data
+    ports:
+      - 25565:25565
 ```
 
-## Docker Compose
+## Troubleshooting
 
-If you prefer to use `docker-compose`, use the following commands:
+Sometimes the Minecraft JAR does not recognize the `-Dcom.mojang.eula.agree=true` flag.
+If that is the case, the server will stop with the message `You need to agree to the EULA in order to run the server. Go to eula.txt for more info.`.
 
-Start the server:
-```sh
-docker-compose up
-```
-Stop the server:
-```sh
-docker-compose stop
-```
-Issue server commands after attaching to the container:
-```sh
-docker attach mcserver
-# then you can type things like "list"
-list
-# which will show the current players online or
-help
-# to see all the commands available
-```
+To solve this edit the eula.txt in your minecraft-data volume and set `eula=true`. This might require root permissions when working with a directory as a volume.
 
-## How to use the Makefile with Docker Compose 
-
-Additionally, a `Makefile` is provided to easily start, stop, and attach to the container.
-
-```sh
-make start     # equivalent to `docker-compose up -d --build`
-make stop      # equivalent to `docker-compose stop --rmi all --remove-orphans`
-make attach    # equivalent to `docker attach mcserver`
-make help      # prints a help message
-```
-
-## Environment variable
-
-MEMORYSIZE = 1G
-
-Not more than 70% of your RAM for your Container! This is important! This is the RAM your Minecraft Server will use within the container WITHOUT the operating system.
-
-TZ = Europe/Berlin 
-
-Sets the timezone for the container. A list of valid values can be found on wikipedia: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
-
-## Tutorial
-
-Tutorial (german) https://marc.tv/anleitung-stabiler-minecraft-server-synology-nas/
-
-[![Watch the video](https://img.youtube.com/vi/LtAQiTwLgak/maxresdefault.jpg)](https://youtu.be/LtAQiTwLgak)
-
-https://youtu.be/LtAQiTwLgak
 
 ## Credits
 
-On GitHub https://github.com/mtoensing/Docker-Minecraft-PaperMC-Server
-
-This server is live here: https://mc.marc.tv
-
-Based on the the work of [Felix Klauke](https://github.com/FelixKlauke/paperspigot-docker) Thanks for your help!
+Forked from: https://github.com/mtoensing/Docker-Minecraft-PaperMC-Server
