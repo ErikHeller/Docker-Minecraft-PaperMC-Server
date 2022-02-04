@@ -2,7 +2,7 @@
 
 Dockerized Minecraft server for 1.18, 1.17 and upcoming versions using [PaperMC](https://papermc.io).
 
-When building an image from the provided Dockerfile, the latest version of the PaperMC Minecraft server will be retrieved from the [PaperMC API v2](https://papermc.io/api/docs/swagger-ui).
+When building an image from the provided Dockerfile, the latest version of the PaperMC Minecraft server will be retrieved from the [PaperMC API v2](https://papermc.io/api/docs/swagger-ui/index.html?configUrl=/api/openapi/swagger-config).
 
 ## Requirements
 
