@@ -11,7 +11,7 @@ When building an image from the provided Dockerfile, the latest version of the P
 
 ## Starting the Minecraft Server
 To start the server execute the command:
-```shell script
+```shell
 docker-compose up -d
 ```
 This will start a docker container with the name `paper_minecraft` in the background.
@@ -23,14 +23,14 @@ The version of the minecraft server can be changed by changing the environment v
 
 Edit the `MC_VERSION` variable in `docker-compose.yml` to contain the desired minecraft server version.
 Check https://papermc.io/downloads to see which versions are currently available or execute 
-```shell script
+```shell
 curl "https://papermc.io/api/v2/projects/paper"
 ```
 in a terminal.
 
 To update the server (and the docker image) re-build the image and restart the container with:
 
-```shell script
+```shell
 docker-compose down
 docker-compose build
 docker-compose up -d
@@ -73,10 +73,28 @@ services:
 ## Troubleshooting
 
 Sometimes the Minecraft JAR does not recognize the `-Dcom.mojang.eula.agree=true` flag.
-If that is the case, the server will stop with the message `You need to agree to the EULA in order to run the server. Go to eula.txt for more info.`.
+If that is the case, the server will stop with the message 
+`You need to agree to the EULA in order to run the server. Go to eula.txt for more info.`.
 
-To solve this edit the eula.txt in your minecraft-data volume and set `eula=true`. This might require root permissions when working with a directory as a volume.
+To solve this edit the eula.txt in your minecraft-data volume and set `eula=true`. 
+This might require root permissions when working with a directory as a volume.
 
+To for editing the eula.txt in a named volume with the editor `vi` create a temporary container with the following command:
+```shell
+docker run -it --volumes-from paper_minecraft --name paper_minecraft_eula --entrypoint vi papermc-docker_minecraft /data/eula.txt
+```
+
+Set `eula=true` and write the changes with the `:wq` command in vi.
+Remove the temporary container:
+
+```shell
+docker rm paper_minecraft_eula
+```
+
+Restart the server:
+```shell
+docker-compose up -d
+```
 
 ## Credits
 
